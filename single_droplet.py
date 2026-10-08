@@ -14,8 +14,10 @@ membrane_width = 1 # Width of the membrane (a)
 membrane_height = 1 # Height of the membrane (b)
 
 mem_tension = [250,250,250] # Tension forces for membranes (T)
-mem_thickness = [0.2E-3,0.2E-3,0.2E-3] # Thicknesses of membranes (h)
-mem_density = [1200,1200,1200] # Densities of membranes (rho)
+mem_thickness = [0.25E-3,0.25E-3,0.25E-3] # Thicknesses of membranes (h)
+mem_density = [1750,1750,1750] # Densities of membranes (rho)
+mem_youngmod = [0.52E9,0.52E9,0.52E9] # Young's moduli of membranes (E)
+mem_poisratio = [0.45,0.45,0.45] # Poisson's ratios of membranes (nu)
 
 imped = [413.2,488.5-114.8j,488.5-114.8j,488.5-114.8j,488.5-114.8j,413.2] # Characteristic impedances of volumes (Z)
 prop = [-18.31j,3.37-22.84j,3.37-22.84j,3.37-22.84j,3.37-22.84j,-18.31j] # Propagation constants of volumes (gamma)
@@ -24,6 +26,8 @@ d1 = 0.02 # Distance from top membrane to first air boundary (d_1)
 d2 = 0.04 # Distance from top membrane to middle membrane (d_2)
 d3 = 0.06 # Distance from top membrane to second air boundary (d_3)
 d4 = 0.08 # Distance from top membrane to bottom membrane (d_4)
+
+mem_bendstiffness = [mem_youngmod[i]*mem_thickness[i]**3 / (12*(1-mem_poisratio[i]**2)) for i in range(3)] # Bending stiffnesses of membranes (B)
 
 # RAIN PROPERTIES
 
@@ -106,7 +110,7 @@ def solve_system(omega,max_mode,omega_k):
         C[i] = 1j * k[i] / (prop[i] * imped[i])
 
     for i in range(3):
-        S[i] = mem_tension[i]*k_prime_sq - mem_density[i]*mem_thickness[i]*(omega**2)
+        S[i] = mem_tension[i]*k_prime_sq + mem_bendstiffness[i]*k_prime_sq - mem_density[i]*mem_thickness[i]*(omega**2)
 
     # Construct RHS vector (b)
     b = np.zeros((max_mode,max_mode,13,1), dtype=complex)
