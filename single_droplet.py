@@ -207,6 +207,9 @@ for m in range(1, max_mode+1):
 
 w1_space_freq = np.zeros((Nomega, Nx, Ny), dtype=complex) # Displacement of top membrane (w_1)
 
+x_listen, y_listen, z_listen = membrane_width/2, membrane_height/2, d4+0.3 # Coordinates of microphone for pressure frequency spectrum plot
+p5_freq = np.zeros(Nomega,dtype=complex) # Complex amplitudes per frequency of p5 at specified mic (x,y,z)
+
 for k, omega in enumerate(tqdm(omegas, desc="Solving system...")): # tqdm displays a progress bar
     if k == 0:
         continue
@@ -217,64 +220,105 @@ for k, omega in enumerate(tqdm(omegas, desc="Solving system...")): # tqdm displa
 
     w1_space_freq[k, :, :] = np.einsum("mn,mnij->ij", w1mn_modes, phi) # Fill up a layer of the w1 solution (layer for this omega)
 
+    for m in range(1, max_mode+1):
+        for n in range(1, max_mode+1):
+            k_mn = np.sqrt(-prop[4]**2 - (m*np.pi/membrane_width)**2 - (n*np.pi/membrane_height)**2)
+            p5_freq[k] += x_sol_all_modes[m-1,n-1,12] * np.exp(1j * z_listen * k_mn) * np.sin(m*np.pi*x_listen/membrane_width)*np.sin(n*np.pi*y_listen/membrane_height)
+
 # Convert each quantity to the time domain
 
 w1_space_time = np.fft.irfft(w1_space_freq, axis=0)
 
-# PLOTTING AND INTERPRETING (3D WAVE PROPAGATION) (GEMINI)
-nt, nx, ny = w1_space_time.shape
+# PLOTTING AND INTERPRETING (GEMINI)
 
-fig = plt.figure(figsize=(9, 7))
-ax = fig.add_subplot(111, projection='3d')
+# # W1 DISPLACEMENT (GEMINI)
+# nt, nx, ny = w1_space_time.shape
+#
+# fig = plt.figure(figsize=(9, 7))
+# ax = fig.add_subplot(111, projection='3d')
+#
+# # 1. Prevent clipping: Set z limits to true absolute max + 15% head room
+# absolute_peak = np.abs(w1_space_time).max()
+# z_max = absolute_peak * 1.15 if absolute_peak > 0 else 1e-6
+#
+# # 2. Time-scaling / Frame striding:
+# # At fs = 44100, 1 frame = 0.0226 ms. Skipping frames speeds up playback to a realistic rate.
+# frame_step = 8  # Step through 8 frames per render step (~350 us per animation frame)
+# frame_indices = np.arange(0, min(nt, 2000), frame_step)
+#
+# # Initialize surface plot
+# color_range = absolute_peak * 0.20  # Boosts color contrast for small waves
+# surf = [ax.plot_surface(X, Y, w1_space_time[0], cmap="RdBu_r",
+#                         vmin=-color_range, vmax=color_range,
+#                         rstride=2, cstride=2, antialiased=True)]
+#
+# # Axis bounds and labels
+# ax.set_xlim(0, membrane_width)
+# ax.set_ylim(0, membrane_height)
+# ax.set_zlim(-z_max, z_max)
+#
+# ax.set_xlabel("x (m)", labelpad=10)
+# ax.set_ylabel("y (m)", labelpad=10)
+# ax.set_zlabel("Displacement (m)", labelpad=10)
+#
+# # Set initial camera view for optimal 3D perspective
+# ax.view_init(elev=28, azim=-125)
+#
+# def update(frame_idx):
+#     t_frame = frame_indices[frame_idx]
+#
+#     # Remove previous frame surface
+#     surf[0].remove()
+#
+#     # Re-draw updated displacement surface
+#     surf[0] = ax.plot_surface(
+#         X, Y, w1_space_time[t_frame],
+#         cmap="RdBu_r",
+#         vmin=-color_range,
+#         vmax=color_range,
+#         rstride=2,
+#         cstride=2,
+#         antialiased=True
+#     )
+#
+#     # Calculate physical time in milliseconds
+#     t_ms = t_frame * (1000.0 / fs)
+#     ax.set_title(f"Top Membrane Transient Response | t = {t_ms:.2f} ms", fontsize=12)
+#
+# # interval=15ms for high FPS playback (~60 fps)
+# anim = FuncAnimation(fig, update, frames=len(frame_indices), interval=15, blit=False)
+# plt.show()
 
-# 1. Prevent clipping: Set z limits to true absolute max + 15% head room
-absolute_peak = np.abs(w1_space_time).max()
-z_max = absolute_peak * 1.15 if absolute_peak > 0 else 1e-6
+# # P5 frequency spectrum at mic position (x,y,z)
+#
+# plt.figure()
+# plt.plot(freqs_hz,abs(p5_freq))
+# plt.title("Pressure frequency spectrum (magnitude) at mic position")
+# plt.xlabel("Frequency (Hz)")
+# plt.ylabel("Pressure magnitude")
+# plt.show()
 
-# 2. Time-scaling / Frame striding:
-# At fs = 44100, 1 frame = 0.0226 ms. Skipping frames speeds up playback to a realistic rate.
-frame_step = 8  # Step through 8 frames per render step (~350 us per animation frame)
-frame_indices = np.arange(0, min(nt, 2000), frame_step)
+# P5 audio file creation (at mic position (x,y,z)) (CLAUDE)
 
-# Initialize surface plot
-color_range = absolute_peak * 0.20  # Boosts color contrast for small waves
-surf = [ax.plot_surface(X, Y, w1_space_time[0], cmap="RdBu_r",
-                        vmin=-color_range, vmax=color_range,
-                        rstride=2, cstride=2, antialiased=True)]
+from scipy.io import wavfile
 
-# Axis bounds and labels
-ax.set_xlim(0, membrane_width)
-ax.set_ylim(0, membrane_height)
-ax.set_zlim(-z_max, z_max)
+p5_time = np.fft.irfft(p5_freq, n=N_fft)
 
-ax.set_xlabel("x (m)", labelpad=10)
-ax.set_ylabel("y (m)", labelpad=10)
-ax.set_zlabel("Displacement (m)", labelpad=10)
+# The raindrop impact sits at t=0, so the click is at the very start of the buffer.
+# Optional: remove DC/subsonic junk
+p5_time -= np.mean(p5_time)
 
-# Set initial camera view for optimal 3D perspective
-ax.view_init(elev=28, azim=-125)
+# Normalize to avoid clipping (leave a little headroom)
+p5_time /= (np.max(np.abs(p5_time)) + 1e-30)
 
-def update(frame_idx):
-    t_frame = frame_indices[frame_idx]
+# Write 16-bit PCM WAV (N_fft/fs ≈ 0.74 s long)
+wavfile.write("raindrop_p5.wav", fs, (0.9 * p5_time * 32767).astype(np.int16))
 
-    # Remove previous frame surface
-    surf[0].remove()
-
-    # Re-draw updated displacement surface
-    surf[0] = ax.plot_surface(
-        X, Y, w1_space_time[t_frame],
-        cmap="RdBu_r",
-        vmin=-color_range,
-        vmax=color_range,
-        rstride=2,
-        cstride=2,
-        antialiased=True
-    )
-
-    # Calculate physical time in milliseconds
-    t_ms = t_frame * (1000.0 / fs)
-    ax.set_title(f"Top Membrane Transient Response | t = {t_ms:.2f} ms", fontsize=12)
-
-# interval=15ms for high FPS playback (~60 fps)
-anim = FuncAnimation(fig, update, frames=len(frame_indices), interval=15, blit=False)
+# Quick look at the waveform
+t_audio = np.arange(N_fft) / fs
+plt.figure()
+plt.plot(t_audio * 1000, p5_time)
+plt.title("Pressure at mic position (time domain)")
+plt.xlabel("Time (ms)")
+plt.ylabel("Normalized pressure")
 plt.show()
