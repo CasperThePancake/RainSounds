@@ -36,6 +36,7 @@ def model2(t):
 df2 = [model2(t) for t in dt]
 
 plt.figure()
+plt.title("Comparison of raindrop impact force models (time domain)")
 plt.plot(dt,df1,label="Model 1 (Toyoda)")
 plt.plot(dt,df2,label="Model 2 (Mitchell)")
 plt.xlabel("t (s)")

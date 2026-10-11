@@ -71,6 +71,9 @@ alpha = density_rainwater * np.pi * radius_raindrop**2 * speed_raindrop**2 # Eq.
 beta = 3/8 * density_rainwater * np.pi * radius_raindrop * speed_raindrop**3 # Eq. from Toyoda paper
 T = alpha/beta
 
+c = (10*np.sqrt(np.pi)/9)*density_rainwater*(2*radius_raindrop)**2*speed_raindrop**2
+tau = (3/10)*(2*radius_raindrop)/speed_raindrop
+
 # Decompose
 
 spatial_factor = np.zeros((max_mode, max_mode)) # Pre-calculated to prevent doing this Nomega times
@@ -81,8 +84,9 @@ for m in range(1, max_mode + 1):
 for k, omega in enumerate(omegas):
     if omega == 0:
         Q_k = 0
-    else:
-        Q_k = alpha / (omega*1j) * (np.exp(1j*omega*T) - 1) - beta/(omega**2) * (1 - np.exp(1j*omega*T) * (1-1j*omega*T) ) # Pre-derived Fourier transform of sawtooth q(t)
+    else: # Pre-derived Fourier transforms
+        # Q_k = alpha / (omega*1j) * (np.exp(1j*omega*T) - 1) - beta/(omega**2) * (1 - np.exp(1j*omega*T) * (1-1j*omega*T) ) # Model 1 (Toyoda): sharp sawtooth
+        Q_k = c*tau*np.sqrt(np.pi) / (2*(1-1j*omega*tau)**(3/2)) # Model 2 (Mitchell): smooth sawtooth
 
     q_mn_freq[k, :, :] = Q_k * spatial_factor
 
@@ -231,63 +235,63 @@ w1_space_time = np.fft.irfft(w1_space_freq, axis=0)
 
 # PLOTTING AND INTERPRETING (GEMINI)
 
-# # W1 DISPLACEMENT (GEMINI)
-# nt, nx, ny = w1_space_time.shape
-#
-# fig = plt.figure(figsize=(9, 7))
-# ax = fig.add_subplot(111, projection='3d')
-#
-# # 1. Prevent clipping: Set z limits to true absolute max + 15% head room
-# absolute_peak = np.abs(w1_space_time).max()
-# z_max = absolute_peak * 1.15 if absolute_peak > 0 else 1e-6
-#
-# # 2. Time-scaling / Frame striding:
-# # At fs = 44100, 1 frame = 0.0226 ms. Skipping frames speeds up playback to a realistic rate.
-# frame_step = 8  # Step through 8 frames per render step (~350 us per animation frame)
-# frame_indices = np.arange(0, min(nt, 2000), frame_step)
-#
-# # Initialize surface plot
-# color_range = absolute_peak * 0.20  # Boosts color contrast for small waves
-# surf = [ax.plot_surface(X, Y, w1_space_time[0], cmap="RdBu_r",
-#                         vmin=-color_range, vmax=color_range,
-#                         rstride=2, cstride=2, antialiased=True)]
-#
-# # Axis bounds and labels
-# ax.set_xlim(0, membrane_width)
-# ax.set_ylim(0, membrane_height)
-# ax.set_zlim(-z_max, z_max)
-#
-# ax.set_xlabel("x (m)", labelpad=10)
-# ax.set_ylabel("y (m)", labelpad=10)
-# ax.set_zlabel("Displacement (m)", labelpad=10)
-#
-# # Set initial camera view for optimal 3D perspective
-# ax.view_init(elev=28, azim=-125)
-#
-# def update(frame_idx):
-#     t_frame = frame_indices[frame_idx]
-#
-#     # Remove previous frame surface
-#     surf[0].remove()
-#
-#     # Re-draw updated displacement surface
-#     surf[0] = ax.plot_surface(
-#         X, Y, w1_space_time[t_frame],
-#         cmap="RdBu_r",
-#         vmin=-color_range,
-#         vmax=color_range,
-#         rstride=2,
-#         cstride=2,
-#         antialiased=True
-#     )
-#
-#     # Calculate physical time in milliseconds
-#     t_ms = t_frame * (1000.0 / fs)
-#     ax.set_title(f"Top Membrane Transient Response | t = {t_ms:.2f} ms", fontsize=12)
-#
-# # interval=15ms for high FPS playback (~60 fps)
-# anim = FuncAnimation(fig, update, frames=len(frame_indices), interval=15, blit=False)
-# plt.show()
+# W1 DISPLACEMENT (GEMINI)
+nt, nx, ny = w1_space_time.shape
+
+fig = plt.figure(figsize=(9, 7))
+ax = fig.add_subplot(111, projection='3d')
+
+# 1. Prevent clipping: Set z limits to true absolute max + 15% head room
+absolute_peak = np.abs(w1_space_time).max()
+z_max = absolute_peak * 1.15 if absolute_peak > 0 else 1e-6
+
+# 2. Time-scaling / Frame striding:
+# At fs = 44100, 1 frame = 0.0226 ms. Skipping frames speeds up playback to a realistic rate.
+frame_step = 8  # Step through 8 frames per render step (~350 us per animation frame)
+frame_indices = np.arange(0, min(nt, 2000), frame_step)
+
+# Initialize surface plot
+color_range = absolute_peak * 0.20  # Boosts color contrast for small waves
+surf = [ax.plot_surface(X, Y, w1_space_time[0], cmap="RdBu_r",
+                        vmin=-color_range, vmax=color_range,
+                        rstride=2, cstride=2, antialiased=True)]
+
+# Axis bounds and labels
+ax.set_xlim(0, membrane_width)
+ax.set_ylim(0, membrane_height)
+ax.set_zlim(-z_max, z_max)
+
+ax.set_xlabel("x (m)", labelpad=10)
+ax.set_ylabel("y (m)", labelpad=10)
+ax.set_zlabel("Displacement (m)", labelpad=10)
+
+# Set initial camera view for optimal 3D perspective
+ax.view_init(elev=28, azim=-125)
+
+def update(frame_idx):
+    t_frame = frame_indices[frame_idx]
+
+    # Remove previous frame surface
+    surf[0].remove()
+
+    # Re-draw updated displacement surface
+    surf[0] = ax.plot_surface(
+        X, Y, w1_space_time[t_frame],
+        cmap="RdBu_r",
+        vmin=-color_range,
+        vmax=color_range,
+        rstride=2,
+        cstride=2,
+        antialiased=True
+    )
+
+    # Calculate physical time in milliseconds
+    t_ms = t_frame * (1000.0 / fs)
+    ax.set_title(f"Top Membrane Transient Response | t = {t_ms:.2f} ms", fontsize=12)
+
+# interval=15ms for high FPS playback (~60 fps)
+anim = FuncAnimation(fig, update, frames=len(frame_indices), interval=15, blit=False)
+plt.show()
 
 # # P5 frequency spectrum at mic position (x,y,z)
 #
@@ -298,27 +302,27 @@ w1_space_time = np.fft.irfft(w1_space_freq, axis=0)
 # plt.ylabel("Pressure magnitude")
 # plt.show()
 
-# P5 audio file creation (at mic position (x,y,z)) (CLAUDE)
-
-from scipy.io import wavfile
-
-p5_time = np.fft.irfft(p5_freq, n=N_fft)
-
-# The raindrop impact sits at t=0, so the click is at the very start of the buffer.
-# Optional: remove DC/subsonic junk
-p5_time -= np.mean(p5_time)
-
-# Normalize to avoid clipping (leave a little headroom)
-p5_time /= (np.max(np.abs(p5_time)) + 1e-30)
-
-# Write 16-bit PCM WAV (N_fft/fs ≈ 0.74 s long)
-wavfile.write("raindrop_p5.wav", fs, (0.9 * p5_time * 32767).astype(np.int16))
-
-# Quick look at the waveform
-t_audio = np.arange(N_fft) / fs
-plt.figure()
-plt.plot(t_audio * 1000, p5_time)
-plt.title("Pressure at mic position (time domain)")
-plt.xlabel("Time (ms)")
-plt.ylabel("Normalized pressure")
-plt.show()
+# # P5 audio file creation (at mic position (x,y,z)) (CLAUDE)
+#
+# from scipy.io import wavfile
+#
+# p5_time = np.fft.irfft(p5_freq, n=N_fft)
+#
+# # The raindrop impact sits at t=0, so the click is at the very start of the buffer.
+# # Optional: remove DC/subsonic junk
+# p5_time -= np.mean(p5_time)
+#
+# # Normalize to avoid clipping (leave a little headroom)
+# p5_time /= (np.max(np.abs(p5_time)) + 1e-30)
+#
+# # Write 16-bit PCM WAV (N_fft/fs ≈ 0.74 s long)
+# wavfile.write("raindrop_p5.wav", fs, (0.9 * p5_time * 32767).astype(np.int16))
+#
+# # Quick look at the waveform
+# t_audio = np.arange(N_fft) / fs
+# plt.figure()
+# plt.plot(t_audio * 1000, p5_time)
+# plt.title("Pressure at mic position (time domain)")
+# plt.xlabel("Time (ms)")
+# plt.ylabel("Normalized pressure")
+# plt.show()
