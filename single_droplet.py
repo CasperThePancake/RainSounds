@@ -19,8 +19,8 @@ mem_density = [1750,1750,1750] # Densities of membranes (rho)
 mem_youngmod = [0.52E9,0.52E9,0.52E9] # Young's moduli of membranes (E)
 mem_poisratio = [0.45,0.45,0.45] # Poisson's ratios of membranes (nu)
 
-imped = [413.2,488.5-114.8j,488.5-114.8j,488.5-114.8j,488.5-114.8j,413.2] # Characteristic impedances of volumes (Z)
-prop = [-18.31j,3.37-22.84j,3.37-22.84j,3.37-22.84j,3.37-22.84j,-18.31j] # Propagation constants of volumes (gamma)
+imped = [413.2,413.2,413.2,413.2,413.2,413.2] # Characteristic impedances of volumes (Z)
+c0 = 343 # Speed of sound in air used to calculate propagation constants based on frequency (c0)
 
 d1 = 0.02 # Distance from top membrane to first air boundary (d_1)
 d2 = 0.04 # Distance from top membrane to middle membrane (d_2)
@@ -103,6 +103,7 @@ def solve_system(omega,max_mode,omega_k):
     M, N = np.meshgrid(m_arr, n_arr, indexing='ij')
 
     # Calculate combined constants
+    prop = 1j*omega/c0 # Propagation constant gamma=i*omega/c0
     C = np.zeros((6, max_mode,max_mode), dtype=complex)
     k = np.zeros((6, max_mode,max_mode),dtype=complex)
     S = np.zeros((3, max_mode,max_mode),dtype=complex)
@@ -110,11 +111,11 @@ def solve_system(omega,max_mode,omega_k):
     k_prime_sq = (M * np.pi / membrane_width)**2 + (N * np.pi / membrane_height)**2
 
     for i in range(6):
-        k[i] = np.sqrt(-prop[i]**2 - k_prime_sq + 0j) # The 0j makes sure negative roots work properly
-        C[i] = 1j * k[i] / (prop[i] * imped[i])
+        k[i] = np.sqrt(-prop**2 - k_prime_sq + 0j) # The 0j makes sure negative roots work properly
+        C[i] = 1j * k[i] / (prop * imped[i])
 
     for i in range(3):
-        S[i] = mem_tension[i]*k_prime_sq + mem_bendstiffness[i]*k_prime_sq - mem_density[i]*mem_thickness[i]*(omega**2)
+        S[i] = mem_tension[i]*k_prime_sq + mem_bendstiffness[i]*k_prime_sq**2 - mem_density[i]*mem_thickness[i]*(omega**2)
 
     # Construct RHS vector (b)
     b = np.zeros((max_mode,max_mode,13,1), dtype=complex)
@@ -224,9 +225,10 @@ for k, omega in enumerate(tqdm(omegas, desc="Solving system...")): # tqdm displa
 
     w1_space_freq[k, :, :] = np.einsum("mn,mnij->ij", w1mn_modes, phi) # Fill up a layer of the w1 solution (layer for this omega)
 
+    prop = 1j*omega/c0 # Propagation constant gamma=i*omega/c0
     for m in range(1, max_mode+1):
         for n in range(1, max_mode+1):
-            k_mn = np.sqrt(-prop[4]**2 - (m*np.pi/membrane_width)**2 - (n*np.pi/membrane_height)**2)
+            k_mn = np.sqrt(-prop**2 - (m*np.pi/membrane_width)**2 - (n*np.pi/membrane_height)**2)
             p5_freq[k] += x_sol_all_modes[m-1,n-1,12] * np.exp(1j * z_listen * k_mn) * np.sin(m*np.pi*x_listen/membrane_width)*np.sin(n*np.pi*y_listen/membrane_height)
 
 # Convert each quantity to the time domain
