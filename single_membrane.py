@@ -19,8 +19,10 @@ mem_density = 1750 # Densities of membranes (rho)
 mem_youngmod = 0.52E9 # Young's moduli of membranes (E)
 mem_poisratio = 0.45 # Poisson's ratios of membranes (nu)
 
-imped = [413.2,413.2] # Characteristic impedances of volumes (Z)
-c0 = 343 # Speed of sound in air used to calculate propagation constants based on frequency (c0)
+c_air = 343 # Speed of sound in air used to calculate propagation constants based on frequency (c0)
+rho_air = 1.225 # Density of air used to calculate characteristic impedance
+
+imped = [c_air*rho_air, c_air*rho_air] # Characteristic impedances of volumes (Z)
 
 mem_bendstiffness = mem_youngmod*mem_thickness**3 / (12*(1-mem_poisratio**2)) # Bending stiffnesses of membranes (B)
 
@@ -98,7 +100,7 @@ def solve_system(omega,max_mode,omega_k):
     M, N = np.meshgrid(m_arr, n_arr, indexing='ij')
 
     # Calculate combined constants
-    prop = 1j*omega/c0 # Propagation constant gamma=i*omega/c0
+    prop = 1j * omega / c_air # Propagation constant gamma=i*omega/c0
     C = np.zeros((2, max_mode,max_mode), dtype=complex)
     k = np.zeros((2, max_mode,max_mode),dtype=complex)
     S = np.zeros((1, max_mode,max_mode),dtype=complex)
@@ -107,10 +109,18 @@ def solve_system(omega,max_mode,omega_k):
 
     for i in range(2):
         k[i] = np.sqrt(-prop**2 - k_prime_sq + 0j) # The 0j makes sure negative roots work properly
+
+    k = np.where(k.imag < 0, -k, k) # Force k_z = i|k_z|, making sure no negative roots were numerically selected
+
+    for i in range(2):
         C[i] = 1j * k[i] / (prop * imped[i])
 
     for i in range(1):
         S[i] = mem_tension*k_prime_sq + mem_bendstiffness*k_prime_sq**2 - mem_density*mem_thickness*(omega**2)
+
+    # Time bench comparison:
+    # Matrix solving: 14 minutes
+    # Exact known solutions: ?? minutes
 
     # Construct RHS vector (b)
     b = np.zeros((max_mode,max_mode,3,1), dtype=complex)
@@ -136,6 +146,18 @@ def solve_system(omega,max_mode,omega_k):
 
     return x_mn.squeeze(-1) # Shape: (max_mode,max_mode,13) (Squeezing to remove the extra b dimension we had)
 
+    # q_mn = q_mn_freq[omega_k, :, :]
+    # S_mn = S[0]
+    #
+    # # Exact closed-form solutions derived from the 3x3 system
+    # denom = S_mn - (1j * omega / C[0]) - (1j * omega / C[1])
+    # W_1 = q_mn / denom
+    # P_0 = (-1j * omega / C[0]) * W_1
+    # P_1 = (1j * omega / C[1]) * W_1
+    #
+    # # Stack into the expected output shape: (max_mode, max_mode, 3)
+    # return np.stack([W_1, P_0, P_1], axis=-1)
+
 # QUANTITY SOLVER
 
 # Precompute modal functions for each (x,y,m,n) to save time
@@ -152,29 +174,41 @@ w1_space_freq = np.zeros((Nomega, Nx, Ny), dtype=complex) # Displacement of top 
 x_listen, y_listen, z_listen = membrane_width/2, membrane_height/2, 0.3 # Coordinates of microphone for pressure frequency spectrum plot
 p5_freq = np.zeros(Nomega,dtype=complex) # Complex amplitudes per frequency of p5 at specified mic (x,y,z)
 
+# Precompute static mode arrays outside the loop
+m_arr = np.arange(1, max_mode + 1)
+n_arr = np.arange(1, max_mode + 1)
+M, N = np.meshgrid(m_arr, n_arr, indexing='ij')
+k_prime_sq = (M * np.pi / membrane_width)**2 + (N * np.pi / membrane_height)**2
+
+# Precompute listener spatial factors
+phi_listener = np.sin(M * np.pi * x_listen / membrane_width) * np.sin(N * np.pi * y_listen / membrane_height)
+
 for k, omega in enumerate(tqdm(omegas, desc="Solving system...")): # tqdm displays a progress bar
     if k == 0:
         continue
 
+    # Solve system
     x_sol_all_modes = solve_system(omega,max_mode,k)
 
+    # Keep track of W1
     w1mn_modes = x_sol_all_modes[:,:,0]
-
     w1_space_freq[k, :, :] = np.einsum("mn,mnij->ij", w1mn_modes, phi) # Fill up a layer of the w1 solution (layer for this omega)
 
-    prop = 1j*omega/c0 # Propagation constant gamma=i*omega/c0
-    for m in range(1, max_mode+1):
-        for n in range(1, max_mode+1):
-            k_mn = np.sqrt(-prop**2 - (m*np.pi/membrane_width)**2 - (n*np.pi/membrane_height)**2)
-            p5_freq[k] += x_sol_all_modes[m-1,n-1,2] * np.exp(1j * z_listen * k_mn) * np.sin(m*np.pi*x_listen/membrane_width)*np.sin(n*np.pi*y_listen/membrane_height)
+    # Keep track of P1
+    # Vectorized vertical wavenumbers for all (m,n) at this omega
+    prop = 1j * omega / c_air
+    k_mn = np.sqrt(-prop**2 - k_prime_sq + 0j)
+    k_mn = np.where(k_mn.imag < 0, -k_mn, k_mn)
 
-# Convert each quantity to the time domain
-
-w1_space_time = np.fft.irfft(w1_space_freq, axis=0)
+    # Vectorized pressure calculation (replaces the nested m, n loops)
+    p3_modes = x_sol_all_modes[:, :, 2] # P_1 (index 2)
+    p5_freq[k] = np.sum(p3_modes * np.exp(1j * z_listen * k_mn) * phi_listener)
 
 # PLOTTING AND INTERPRETING (GEMINI)
 
 # W1 DISPLACEMENT (GEMINI)
+w1_space_time = np.fft.irfft(w1_space_freq, axis=0)
+
 nt, nx, ny = w1_space_time.shape
 
 fig = plt.figure(figsize=(9, 7))

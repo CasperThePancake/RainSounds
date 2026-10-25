@@ -19,8 +19,10 @@ mem_density = [1750,1750,1750] # Densities of membranes (rho)
 mem_youngmod = [0.52E9,0.52E9,0.52E9] # Young's moduli of membranes (E)
 mem_poisratio = [0.45,0.45,0.45] # Poisson's ratios of membranes (nu)
 
-imped = [413.2,413.2,413.2,413.2,413.2,413.2] # Characteristic impedances of volumes (Z)
-c0 = 343 # Speed of sound in air used to calculate propagation constants based on frequency (c0)
+c_air = 343 # Speed of sound in air used to calculate propagation constants based on frequency (c0)
+rho_air = 1.225 # Density of air used to calculate characteristic impedance
+
+imped = [c_air*rho_air, c_air*rho_air, c_air*rho_air, c_air*rho_air, c_air*rho_air, c_air*rho_air] # Characteristic impedances of volumes (Z)
 
 d1 = 0.02 # Distance from top membrane to first air boundary (d_1)
 d2 = 0.04 # Distance from top membrane to middle membrane (d_2)
@@ -103,7 +105,7 @@ def solve_system(omega,max_mode,omega_k):
     M, N = np.meshgrid(m_arr, n_arr, indexing='ij')
 
     # Calculate combined constants
-    prop = 1j*omega/c0 # Propagation constant gamma=i*omega/c0
+    prop = 1j * omega / c_air # Propagation constant gamma=i*omega/c0
     C = np.zeros((6, max_mode,max_mode), dtype=complex)
     k = np.zeros((6, max_mode,max_mode),dtype=complex)
     S = np.zeros((3, max_mode,max_mode),dtype=complex)
@@ -113,6 +115,8 @@ def solve_system(omega,max_mode,omega_k):
     for i in range(6):
         k[i] = np.sqrt(-prop**2 - k_prime_sq + 0j) # The 0j makes sure negative roots work properly
         C[i] = 1j * k[i] / (prop * imped[i])
+
+    k = np.where(k.imag < 0, -k, k) # Force k_z = i|k_z|, making sure no negative roots were numerically selected
 
     for i in range(3):
         S[i] = mem_tension[i]*k_prime_sq + mem_bendstiffness[i]*k_prime_sq**2 - mem_density[i]*mem_thickness[i]*(omega**2)
@@ -225,7 +229,7 @@ for k, omega in enumerate(tqdm(omegas, desc="Solving system...")): # tqdm displa
 
     w1_space_freq[k, :, :] = np.einsum("mn,mnij->ij", w1mn_modes, phi) # Fill up a layer of the w1 solution (layer for this omega)
 
-    prop = 1j*omega/c0 # Propagation constant gamma=i*omega/c0
+    prop = 1j * omega / c_air # Propagation constant gamma=i*omega/c0
     for m in range(1, max_mode+1):
         for n in range(1, max_mode+1):
             k_mn = np.sqrt(-prop**2 - (m*np.pi/membrane_width)**2 - (n*np.pi/membrane_height)**2)
