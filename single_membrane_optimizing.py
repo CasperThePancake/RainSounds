@@ -61,12 +61,12 @@ q_mn_freq = np.zeros((Nomega,max_mode,max_mode),dtype=complex)
 
 # We assume q is a delta function in space and some model in time (sharp or smooth sawtooth)
 
-x0 = membrane_width/2 # Must lie in [0,membrane_width]
-y0 = membrane_height/2 # Must lie in [0,membrane_height]
+x0 = membrane_width/4 # Must lie in [0,membrane_width]
+y0 = membrane_height/4 # Must lie in [0,membrane_height]
 
-# alpha = density_rainwater * np.pi * radius_raindrop**2 * speed_raindrop**2 # Eq. from Toyoda paper
-# beta = 3/8 * density_rainwater * np.pi * radius_raindrop * speed_raindrop**3 # Eq. from Toyoda paper
-# T = alpha/beta
+alpha = density_rainwater * np.pi * radius_raindrop**2 * speed_raindrop**2 # Eq. from Toyoda paper
+beta = 3/8 * density_rainwater * np.pi * radius_raindrop * speed_raindrop**3 # Eq. from Toyoda paper
+T = alpha/beta
 
 c = (10*np.sqrt(np.pi)/9)*density_rainwater*(2*radius_raindrop)**2*speed_raindrop**2
 tau = (3/10)*(2*radius_raindrop)/speed_raindrop
@@ -82,13 +82,13 @@ for k, omega in enumerate(omegas):
     if omega == 0:
         Q_k = 0
     else: # Pre-derived Fourier transforms
-        # Q_k = alpha / (omega*1j) * (np.exp(1j*omega*T) - 1) - beta/(omega**2) * (1 - np.exp(1j*omega*T) * (1-1j*omega*T) ) # Model 1 (Toyoda): sharp sawtooth
-        Q_k = c*tau*np.sqrt(np.pi) / (2*(1-1j*omega*tau)**(3/2)) # Model 2 (Mitchell): smooth sawtooth
+        Q_k = alpha / (omega*1j) * (np.exp(1j*omega*T) - 1) - beta/(omega**2) * (1 - np.exp(1j*omega*T) * (1-1j*omega*T) ) # Model 1 (Toyoda): sharp sawtooth
+        # Q_k = c*tau*np.sqrt(np.pi) / (2*(1-1j*omega*tau)**(3/2)) # Model 2 (Mitchell): smooth sawtooth
 
     q_mn_freq[k, :, :] = Q_k * spatial_factor
 
 # LINEAR SYSTEM SOLVER
-# Output form (13 solved unknowns): [W_1mn, P_0mn-, P_5mn+]
+# Output form (3 solved unknowns): [W_1mn, P_0mn-, P_5mn+]
 
 def solve_system(omega,max_mode,omega_k):
     # We solve all systems (for all (m,n)) at once for this given omega

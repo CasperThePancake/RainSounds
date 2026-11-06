@@ -88,7 +88,7 @@ for k, omega in enumerate(omegas):
     q_mn_freq[k, :, :] = Q_k * spatial_factor
 
 # LINEAR SYSTEM SOLVER
-# Output form (13 solved unknowns): [W_1mn, P_0mn-, P_5mn+]
+# Output form (3 solved unknowns): [W_1mn, P_0mn-, P_5mn+]
 
 def solve_system(omega,max_mode,omega_k):
     # We solve all systems (for all (m,n)) at once for this given omega
