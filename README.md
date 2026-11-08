@@ -17,3 +17,5 @@ Work-in-progress numerical model for rain droplets impacting a three-layer membr
 - _dispersion.py_: Comparing dispersion curves for different dampening techniques
 - _single_membrane_anisotropic.py_: Implementation of simple anisotropic tension
 - _single_membrane_damping.py_: Implementation of different damping techniques
+- _acc_analysis.py_: Analysis code for accelerometer measurements
+- _single_membrane_cacherain.py_: Script to generate many audio files for parameters at once, used as cache for live rainfall audio in _raindrop_distribution_test.py_

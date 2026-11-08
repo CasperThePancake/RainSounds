@@ -4,7 +4,7 @@ from scipy.signal import butter, filtfilt, hilbert
 from scipy.io import wavfile
 
 # 1. Load the WAV file and convert to float (prevents integer overflow)
-sample_rate, data = wavfile.read("data_acc/s567217_20cm_wet.wav")
+sample_rate, data = wavfile.read("data_acc/s567217_20cm_dry.wav")
 if len(data.shape) > 1:
   data = data[:, 0]
 data = data.astype(float)
@@ -47,11 +47,14 @@ post_peak_envelope = envelope[peak_idx:]
 post_peak_time = time[peak_idx:] - time[peak_idx]
 
 below_threshold = np.where(post_peak_envelope < decay_threshold)[0]
-decay_time = (
-    post_peak_time[below_threshold[0]]
-    if len(below_threshold) > 0
-    else post_peak_time[-1]
+decay_idx_rel = (
+    below_threshold[0] if len(below_threshold) > 0 else len(post_peak_time) - 1
 )
+decay_time = post_peak_time[decay_idx_rel]
+
+# Absolute times (on the plot's time axis) for the markers
+peak_time_abs = time[peak_idx]
+decay_time_abs = time[peak_idx + decay_idx_rel]
 
 # Spectral Centroid
 fft_vals = np.fft.rfft(filtered_segment)
@@ -70,8 +73,13 @@ fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
 
 # Top Subplot: Unfiltered
 ax1.plot(time, unfiltered_segment, color="gray", alpha=0.7, linewidth=0.8)
+ax1.axvline(peak_time_abs, color="red", linestyle="-", linewidth=1.2,
+            label=f"Peak ({peak_time_abs * 1000:.1f} ms)")
+ax1.axvline(decay_time_abs, color="blue", linestyle="-", linewidth=1.2,
+            label=f"10% cutoff ({decay_time_abs * 1000:.1f} ms)")
 ax1.set_title("Unfiltered Signal (Contains Drift / Low-Freq Noise)")
 ax1.set_ylabel("Amplitude")
+ax1.legend(loc="upper right")
 ax1.grid(True, linestyle="--", alpha=0.5)
 
 # Bottom Subplot: Filtered
@@ -79,10 +87,16 @@ ax2.plot(
     time, filtered_segment, color="darkorange", alpha=0.8, linewidth=0.8
 )
 ax2.plot(time, envelope, color="black", linestyle="--", alpha=0.6, label="Envelope")
+ax2.axvline(peak_time_abs, color="red", linestyle="-", linewidth=1.2,
+            label=f"Peak ({peak_time_abs * 1000:.1f} ms)")
+ax2.axvline(decay_time_abs, color="blue", linestyle="-", linewidth=1.2,
+            label=f"10% cutoff ({decay_time_abs * 1000:.1f} ms)")
+ax2.axhline(decay_threshold, color="blue", linestyle=":", linewidth=1,
+            alpha=0.7, label="10% of peak envelope")
 ax2.set_title("Filtered Signal (100 Hz High-Pass) with Envelope")
 ax2.set_xlabel("Time (seconds)")
 ax2.set_ylabel("Amplitude")
-ax2.legend()
+ax2.legend(loc="upper right")
 ax2.grid(True, linestyle="--", alpha=0.5)
 
 plt.tight_layout()
