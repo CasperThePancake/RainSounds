@@ -14,8 +14,9 @@ Work-in-progress numerical model for rain droplets impacting a three-layer membr
 - _raindrop_impact_force_frequency.py_: Same, but in the frequency domain (amplitude + phase)
 - _single_membrane_optimizing_majidcomparison.py_: Using parameters from Majid's code to compare results
 - _MAJID_single_membrane_one_drop_v5_final.ipynb_: Majid's code in a Jupyter Notebook
-- _dispersion.py_: Comparing dispersion curves for different dampening techniques
+- _dispersion.py_: Comparing dispersion curves for different dampening techniques, also RT(f) data fitting
 - _single_membrane_anisotropic.py_: Implementation of simple anisotropic tension
 - _single_membrane_damping.py_: Implementation of different damping techniques
 - _acc_analysis.py_: Analysis code for accelerometer measurements
+- _acc_spectro.py_: Comparing accelerometer measurements in spectral form
 - _single_membrane_cacherain.py_: Script to generate many audio files for parameters at once, used as cache for live rainfall audio in _raindrop_distribution_test.py_
