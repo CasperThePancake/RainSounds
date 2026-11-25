@@ -18,8 +18,8 @@ mem_thickness = 0.25E-3 # Thicknesses of membranes (h)
 mem_density = 1750 # Densities of membranes (rho)
 mem_youngmod = 0.52E9 # Young's moduli of membranes (E)
 mem_poisratio = 0.45 # Poisson's ratios of membranes (nu)
-mem_viscousdamping = 25.0 # Viscous damping coefficient (c_d)
-mem_structloss = 0.0 # Structural loss factor, for Im(B) (eta)
+mem_viscousdamping = 0.0 # Viscous damping coefficient (c_d)
+mem_structloss = 0.03 # Structural loss factor, for Im(B) (eta)
 
 c_air = 343 # Speed of sound in air used to calculate propagation constants based on frequency (c0)
 rho_air = 1.225 # Density of air used to calculate characteristic impedance

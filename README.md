@@ -20,3 +20,7 @@ Work-in-progress numerical model for rain droplets impacting a three-layer membr
 - _acc_analysis.py_: Analysis code for accelerometer measurements
 - _acc_spectro.py_: Comparing accelerometer measurements in spectral form
 - _single_membrane_cacherain.py_: Script to generate many audio files for parameters at once, used as cache for live rainfall audio in _raindrop_distribution_test.py_
+- _single_membrane_comparespectra.py_: Script to compare pure frequency spectra for different tensions
+- _single_membrane_maxdisplacement.py_: Script to compare the maximum displacement of the membrane for different tensions
+- _single_membrane_octavebands.py_: Script to compare octave band frequency spectra for different tensions
+- _single_membrane_octavebands_majidcomparison.py_: Script to compare our best current model to Majid's experimental recordings

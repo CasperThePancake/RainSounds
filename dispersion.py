@@ -276,18 +276,18 @@ plt.show()
 
 # --- 4. PLOTTING RESULTS ---
 # 16:9 landscape to match a slide
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(13.33, 7.5))
+fig, ax2 = plt.subplots(1, 1, figsize=(13.33, 7.5))
 
-# Plot 1: Phase Velocity Comparison
-ax1.plot(frequencies_hz, c_base, color='#1f77b4', label='Baseline (Purely Elastic)')
-ax1.plot(frequencies_hz, c_hys, color='#ff7f0e', linewidth=2, linestyle='--', label=f'Hysteretic ($\eta$ = {eta})')
-ax1.plot(frequencies_hz, c_vis, color='#2ca02c', linewidth=2, linestyle='-.', label=f'Viscous ($c_d$ = {cd})')
-ax1.set_title('ETFE Membrane Phase Velocity Dispersion Curve', pad=16, fontweight='bold')
-ax1.set_ylabel('Phase Velocity $c$ (m/s)', labelpad=10)
-ax1.set_xlabel('Frequency (Hz)', labelpad=10)
-ax1.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x/1000:g}k' if x >= 1000 else f'{x:g}'))
-ax1.grid(True, which='both', linestyle='--', alpha=0.6)
-ax1.legend(loc='best', frameon=True, framealpha=0.95)
+# # Plot 1: Phase Velocity Comparison
+# ax1.plot(frequencies_hz, c_base, color='#1f77b4', label='Baseline (Purely Elastic)')
+# ax1.plot(frequencies_hz, c_hys, color='#ff7f0e', linewidth=2, linestyle='--', label=f'Hysteretic ($\eta$ = {eta})')
+# ax1.plot(frequencies_hz, c_vis, color='#2ca02c', linewidth=2, linestyle='-.', label=f'Viscous ($c_d$ = {cd})')
+# ax1.set_title('ETFE Membrane Phase Velocity Dispersion Curve', pad=16, fontweight='bold')
+# ax1.set_ylabel('Phase Velocity $c$ (m/s)', labelpad=10)
+# ax1.set_xlabel('Frequency (Hz)', labelpad=10)
+# ax1.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x/1000:g}k' if x >= 1000 else f'{x:g}'))
+# ax1.grid(True, which='both', linestyle='--', alpha=0.6)
+# ax1.legend(loc='best', frameon=True, framealpha=0.95)
 
 # Plot 2: Spatial Attenuation Constant Comparison
 ax2.plot(frequencies_hz, attn_base, color='#1f77b4', linewidth=2, label='Baseline (Zero Attenuation)')
