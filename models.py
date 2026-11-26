@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-"""Models.py: Description of what it does."""
-
 __author__ = "Casper Vermeeren"
 __copyright__ = "Copyright 2026"
 __credits__ = ["Loïck Sansen", "Majid Lavasani", "Christ Glorieux", "Masahiro Toyoda", "Benjamin Mitchell"]
